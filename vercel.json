@@ -1,14 +1,14 @@
 {
   "builds": [
     {
-      "src": "api/worker.py",
+      "src": "src/worker.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "api/worker.py"
+      "dest": "src/worker.py"
     }
   ]
 }

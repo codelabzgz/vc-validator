@@ -1,3 +1,4 @@
-fastapi[standard]
+fastapi
+uvicorn
 autopep8
 python-dotenv
