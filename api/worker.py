@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, staticfiles
 from datetime import datetime
-from src.validators import onePizza
+from validators import onePizza
 from pydantic import BaseModel, HttpUrl
 from typing import Dict
 from dotenv import load_dotenv
