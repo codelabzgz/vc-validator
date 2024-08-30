@@ -1,0 +1,21 @@
+[pep8]
+# Equivalente a printWidth de Prettier
+max-line-length = 80
+
+# Espacio antes y después de operadores
+# Equivalente a bracketSpacing (controla el espacio dentro de las llaves, que no aplica exactamente aquí)
+hang-closing = false
+
+# Espacio entre paréntesis y contenido (equivalente aproximado a arrowParens de Prettier)
+aggressive = 2
+
+# No compatible con trailingComma, pero esto evitará una coma extra al final de listas y diccionarios
+ignore = E231
+
+# Configuración similar a singleQuote
+# Aunque PEP8 usa comillas dobles para docstrings y comillas simples para otros casos,
+# esta regla puede no aplicarse directamente, pero es importante seguir la convención PEP8.
+# El autopep8 no tiene configuración directa para forzar comillas simples o dobles.
+
+# Equivalente a useTabs y tabWidth
+indent-size = 2
