@@ -1,10 +1,25 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, staticfiles
 from datetime import datetime
 from validators import onePizza
-from toml import load
+from pydantic import BaseModel, HttpUrl
+from typing import Dict
+from dotenv import load_dotenv
+from os import getenv as env
 
-config = load('wrangler.toml')
-API_URL = config['env']['development']['API_URL']
+load_dotenv()
+
+
+class InputFile(BaseModel):
+  name: str
+  path: HttpUrl
+
+
+class ValidatorOnePizzaResponse(BaseModel):
+  id: str
+  input: Dict[str, InputFile]
+  success: bool
+  points: int
+
 
 app = FastAPI()
 app.mount(
@@ -29,7 +44,7 @@ async def health_check():
 # Endpoint de validación específico para el evento "one-pizza"
 
 
-@app.post("/validator/one-pizza")
+@app.post("/validator/one-pizza", response_model=ValidatorOnePizzaResponse)
 async def validator_one_pizza(outfile: UploadFile = File(...)):
   """
   Endpoint para validar el archivo de salida de un problema de ejemplo ("one-pizza").
@@ -69,17 +84,17 @@ async def validator_one_pizza(outfile: UploadFile = File(...)):
 
     score = onePizza.calculate_score(clients, pizza)
 
-    return {
-        'id': 'one-pizza',
-        'input': {
-            'file': {
-                'name': filename,
-                'path': f'{API_URL}/static/{filename}'
-            }
+    return ValidatorOnePizzaResponse(
+        id='one-pizza',
+        input={
+            'file': InputFile(
+                name=filename,
+                path=f'{env("API_URL")}/static/{filename}'
+            )
         },
-        'success': score > 0,
-        'points': score
-    }
+        success=score > 0,
+        points=score
+    )
 
   except Exception as e:
     raise HTTPException(

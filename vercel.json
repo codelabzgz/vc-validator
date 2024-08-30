@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "src/worker.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/worker.py"
+    }
+  ]
+}

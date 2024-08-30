@@ -1,4 +1,4 @@
-# cf-validator
+# vc-validator
 
 Este proyecto ofrece una plantilla para crear un validador de retos con FastAPI.
 
@@ -36,7 +36,7 @@ fastapi dev src/worker.py
 uvicorn src.worker:app --reload
 ```
 
-## Despliegue en Cloudflare
+## Despliegue en Vercel
 
 Por escribir...
 
