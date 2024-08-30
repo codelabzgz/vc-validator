@@ -3,9 +3,14 @@
     {
       "src": "api/worker.py",
       "use": "@vercel/python"
+
     }
   ],
   "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "api/worker.py"
+    },
     {
       "src": "/(.*)",
       "dest": "api/worker.py"

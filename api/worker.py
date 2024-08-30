@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, staticfiles
 from datetime import datetime
-from validators import onePizza
+from api.validators import onePizza
 from pydantic import BaseModel, HttpUrl
 from typing import Dict
 from dotenv import load_dotenv
@@ -24,9 +24,14 @@ class ValidatorOnePizzaResponse(BaseModel):
 app = FastAPI()
 app.mount(
     "/static",
-    staticfiles.StaticFiles(directory="src/static"),
+    staticfiles.StaticFiles(directory="api/static"),
     name="static"
 )
+
+
+@app.get("/")
+def read_root():
+  return {"message": "Hello World"}
 
 
 @app.get("/health")
@@ -40,8 +45,6 @@ async def health_check():
           "timestamp": datetime.now().isoformat()
       }
   }
-
-# Endpoint de validación específico para el evento "one-pizza"
 
 
 @app.post("/validator/one-pizza", response_model=ValidatorOnePizzaResponse)
@@ -73,7 +76,7 @@ async def validator_one_pizza(outfile: UploadFile = File(...)):
   try:
     # procesa el archivo base con el que se compara la entrada del usuario
     filename = 'a_an_example.in.txt'
-    with open(f'src/static/{filename}', 'r', encoding='utf-8') as f:
+    with open(f'api/static/{filename}', 'r', encoding='utf-8') as f:
       infile_content = f.read()
       _, clients = onePizza.parse_input_file(infile_content)
 
