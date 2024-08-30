@@ -1,4 +1,3 @@
 fastapi
-uvicorn
-autopep8
-python-dotenv
+pydantic
+python-multipart
