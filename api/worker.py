@@ -1,23 +1,7 @@
 from fastapi import FastAPI, HTTPException, staticfiles
 from datetime import datetime
+from models.req import EventData
 from validators import onePizza, fibonacci
-from pydantic import BaseModel, HttpUrl
-from typing import Optional, List
-
-
-class InputFile(BaseModel):
-    name: str
-    path: HttpUrl
-
-
-class RequestData(BaseModel):
-    id: str
-    event: str
-    challenge: str
-    input: Optional[str] = None
-    expected: Optional[str] = None
-    outputs: str
-
 
 app = FastAPI()
 app.mount(
@@ -41,12 +25,13 @@ async def health_check():
 
 
 @app.post("/validator/one-pizza")
-async def validator_one_pizza(data: List[RequestData]):
+async def validator_one_pizza(data: EventData):
     try:
-        for test in data:
-            filename = test.input
-            content = test.outputs
-            print(test)
+        id = 0
+        data.points = 0
+        for file in data.files:
+            filename = file.filename
+            content = file.content
 
             # procesa el archivo base con el que se compara la entrada del usuario
             with open(f'api/static/{filename}', 'r', encoding='utf-8') as f:
@@ -57,7 +42,20 @@ async def validator_one_pizza(data: List[RequestData]):
             pizza = onePizza.parse_output_file(content)
 
             score = onePizza.calculate_score(clients, pizza)
-            print(score)
+
+            data.points = max(data.points, score)
+            file.tests.append({
+                "id": id + 1,
+                "input": {
+                    "file": {
+                        "name": filename,
+                        "path": "http://localhost",
+                    }
+                },
+                "actual": content,
+                "success": score > 0
+            })
+            id += 1
 
         return data
 
@@ -69,16 +67,15 @@ async def validator_one_pizza(data: List[RequestData]):
 
 
 @app.post("/validator/fibonacci")
-async def validator_one_pizza(data: List[RequestData]):
+async def validator_one_pizza(data: EventData):
     try:
-        response = []
-        for test in data:
-            print(test)
-            outputs = [int(x) for x in test.outputs.split(", ")]
+        for test in data.files[0].tests:
+            outputs = [int(x) for x in test.actual.split(", ")]
             success = fibonacci.is_fibonacci_sequence(outputs)
-            print(success)
+            test.success = success
+            test.actual = test.output.stdout
 
-        return response
+        return data
 
     except Exception as e:
         raise HTTPException(
