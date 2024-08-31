@@ -1,9 +1,8 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, staticfiles
+from fastapi import FastAPI, HTTPException, staticfiles
 from datetime import datetime
-from validators import onePizza
+from validators import onePizza, fibonacci
 from pydantic import BaseModel, HttpUrl
-from typing import Dict
-from os import getenv as env
+from typing import Optional, List
 
 
 class InputFile(BaseModel):
@@ -11,19 +10,14 @@ class InputFile(BaseModel):
     path: HttpUrl
 
 
-class ValidatorOnePizzaResponse(BaseModel):
+class RequestData(BaseModel):
     id: str
-    input: Dict[str, InputFile]
-    success: bool
-    points: int
+    event: str
+    challenge: str
+    input: Optional[str] = None
+    expected: Optional[str] = None
+    outputs: str
 
-
-app = FastAPI()
-app.mount(
-    "/static",
-    staticfiles.StaticFiles(directory="api/static"),
-    name="static"
-)
 
 app = FastAPI()
 app.mount(
@@ -46,57 +40,45 @@ async def health_check():
     }
 
 
-@app.post("/validator/one-pizza", response_model=ValidatorOnePizzaResponse)
-async def validator_one_pizza(outfile: UploadFile = File(...)):
-    """
-    Endpoint para validar el archivo de salida de un problema de ejemplo ("one-pizza").
-
-    Parámetros:
-    - outfile (UploadFile): Archivo subido que debe ser validado.
-
-    Funcionamiento:
-    1. Lee el contenido del archivo de entrada predefinido (infile) desde la ruta especificada.
-    2. Usa la función parse_input_file del módulo `onePizza` para procesar el contenido del archivo de entrada.
-    3. Lee el contenido del archivo subido (`outfile`), lo decodifica y lo convierte en una lista de líneas.
-    4. Usa la función parse_output_file del módulo `onePizza` para procesar el contenido del archivo subido.
-    5. Calcula la puntuación usando la función `calculate_score` del módulo `onePizza`.
-    6. Devuelve un resultado que incluye un identificador, un estado de éxito y la puntuación calculada.
-
-    Devuelve:
-    - Un diccionario con el resultado de la validación que incluye:
-        - 'id': Identificador del evento o archivo.
-        - 'input': Ejemplo de entrada (puede ser ajustado según el contexto real).
-        - 'success': Booleano que indica si la puntuación es mayor que 0.
-        - 'points': La puntuación calculada.
-
-    Manejo de Errores:
-    - Si ocurre un error durante el procesamiento, se captura y se devuelve un error 500 con un mensaje descriptivo.
-    """
+@app.post("/validator/one-pizza")
+async def validator_one_pizza(data: List[RequestData]):
     try:
-        # procesa el archivo base con el que se compara la entrada del usuario
-        filename = 'a_an_example.in.txt'
-        with open(f'api/static/{filename}', 'r', encoding='utf-8') as f:
-            infile_content = f.read()
-            _, clients = onePizza.parse_input_file(infile_content)
+        for test in data:
+            filename = test.input
+            content = test.outputs
+            print(test)
 
-        # Procesa el archivo subido (outfile).
-        outfile_content = await outfile.read()
-        outfile_content = outfile_content.decode("utf-8")
-        pizza = onePizza.parse_output_file(outfile_content)
+            # procesa el archivo base con el que se compara la entrada del usuario
+            with open(f'api/static/{filename}', 'r', encoding='utf-8') as f:
+                infile_content = f.read()
+                _, clients = onePizza.parse_input_file(infile_content)
 
-        score = onePizza.calculate_score(clients, pizza)
+            # Procesa el archivo subido (outfile).
+            pizza = onePizza.parse_output_file(content)
 
-        return ValidatorOnePizzaResponse(
-            id='one-pizza',
-            input={
-                'file': InputFile(
-                    name=filename,
-                    path=f'{env("API_URL")}/static/{filename}'
-                )
-            },
-            success=score > 0,
-            points=score
+            score = onePizza.calculate_score(clients, pizza)
+            print(score)
+
+        return data
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal Server Error: {str(e)}"
         )
+
+
+@app.post("/validator/fibonacci")
+async def validator_one_pizza(data: List[RequestData]):
+    try:
+        response = []
+        for test in data:
+            print(test)
+            outputs = [int(x) for x in test.outputs.split(", ")]
+            success = fibonacci.is_fibonacci_sequence(outputs)
+            print(success)
+
+        return response
 
     except Exception as e:
         raise HTTPException(
