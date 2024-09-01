@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, staticfiles
 from datetime import datetime
 from models.req import EventData
 from validators import onePizza, fibonacci
+from os import getenv as env
 
 app = FastAPI()
 app.mount(
@@ -49,7 +50,7 @@ async def validator_one_pizza(data: EventData):
                 "input": {
                     "file": {
                         "name": filename,
-                        "path": "http://localhost",
+                        "path": f"{env("API_URL")}/static/{filename}",
                     }
                 },
                 "actual": content,
