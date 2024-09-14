@@ -31,6 +31,7 @@ class Test(BaseModel):
     actual: Optional[Union[str, Resource]] = None
     output: Optional[Union[Output, str]] = None
     success: Optional[bool] = None
+    points: int
 
 
 class File(BaseModel):
@@ -40,7 +41,6 @@ class File(BaseModel):
     languageId: int
     content: str
     tests: List[Test]
-
 
 class EventData(BaseModel):
     event: str

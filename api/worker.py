@@ -54,7 +54,8 @@ async def validator_one_pizza(data: EventData):
                     }
                 },
                 "actual": content,
-                "success": score > 0
+                "success": score > 0,
+                "points": score
             })
             id += 1
 
