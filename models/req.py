@@ -29,9 +29,9 @@ class Test(BaseModel):
     expected: Optional[Union[str, Resource]] = None
     visibility: str
     actual: Optional[Union[str, Resource]] = None
-    output: Optional[Union[Output, str]] = None
+    output: Optional[Union[str, Output]] = None
     success: Optional[bool] = None
-    points: int
+    points: Optional[int] = None
 
 
 class File(BaseModel):

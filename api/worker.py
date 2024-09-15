@@ -69,13 +69,14 @@ async def validator_one_pizza(data: EventData):
 
 
 @app.post("/validator/fibonacci")
-async def validator_one_pizza(data: EventData):
+async def validator_fibonacci(data: EventData):
     try:
         for test in data.files[0].tests:
             outputs = [int(x) for x in test.actual.split(", ")]
             success = fibonacci.is_fibonacci_sequence(outputs)
             test.success = success
             test.actual = test.output.stdout
+            test.points = 5 if success else 0
 
         return data
 
