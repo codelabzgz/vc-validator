@@ -36,9 +36,9 @@ async def validator_one_pizza(data: EventData):
 
             # procesa el archivo base con el que se compara la entrada del usuario
             with open(f'api/static/{filename}', 'r', encoding='utf-8') as f:
-                infile_content = f.read()
+                infile_content = f.readlines()
                 _, clients = onePizza.parse_input_file(infile_content)
-
+            
             # Procesa el archivo subido (outfile).
             pizza = onePizza.parse_output_file(content)
 
