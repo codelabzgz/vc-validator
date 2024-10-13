@@ -103,7 +103,7 @@ def validate_output_data(map_size, initial_position, points, total_movements, ro
     current_position = initial_position
     # Inicializar el contador de movimientos a cero
     movement_count = 0
-    # Inicializar el contador de puntos visitados a cero
+    # Inicializar el contador de puntos visitados a uno
     visited_points_count = 1
     
     # Iterar sobre cada ruta
