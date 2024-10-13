@@ -112,6 +112,14 @@ def validate_output_data(map_size, initial_position, points, total_movements, ro
         if (start_x, start_y) != current_position:
             raise ValueError(f"La posición de inicio de la ruta {start_x},{start_y} no coincide con la posición actual {current_position}")
         
+        # Verificar si el ID del punto es válido
+        if point_id < 1 or point_id > len(points):
+            raise ValueError(f"ID de punto inválido: {point_id}")
+
+        # Verificar si el punto ya fue visitado
+        if point_id in visited_points:
+            raise ValueError(f"El punto {point_id} ya ha sido visitado")
+
         # Iterar sobre cada dirección en la ruta
         for direction in directions:
             # Actualizar la posición actual según la dirección
