@@ -156,7 +156,7 @@ def validate_output_data(map_size, initial_position, points, total_movements, ro
     if movement_count != total_movements:
         raise ValueError(f"El total de movimientos {movement_count} no coincide con el esperado {total_movements}")
     
-    # Verificar si todos los puntos de orden especial fueron visitados en el orden correcto
+    # Verificar si todos los puntos fueron visitados
     for i, (x, y, s) in enumerate(points):
         if (i + 1) not in visited_points:
             raise ValueError(f"El punto {i + 1} no fue visitado.")
