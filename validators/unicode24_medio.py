@@ -103,6 +103,12 @@ class MapConfig:
     point = self.find_point(point_id)
     return point.coords if point else None
 
+  def contains_all_dpoints(self, ids):
+    expected_ids = set(map(lambda p: p.point_id, self.delivery_points))
+    received_ids = set(ids)
+    return expected_ids - received_ids == {}
+
+
 
 def parse_route(raw_route):
   [ point_id, initial_coords, movs ] = raw_route.split(';')
@@ -140,5 +146,5 @@ def validate_output(config, output_file):
 
   if reported_movs != 0:
     return None, f"Reported movements at beginning of file don't match those in the routes, differ by {abs(reported_movs)}"
-  if delivery_points != config.points_ids():
-    return None, f"Mismatched delivery points in drone's path\nFound: {delivery_points}\nExpected: {config.points_ids()}"
+  if not config.contains_all_dpoints(delivery_points):
+    return None, "Drone doesn't visit all of the delivery points" 
