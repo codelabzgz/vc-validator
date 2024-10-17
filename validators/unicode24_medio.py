@@ -30,8 +30,7 @@ class MapConfig:
           self.walls += [(wall["init"][0], y) for y in range(wall["init"][1], wall["end"][1]+1)]
         else: # Horizontal wall
           self.walls += [(x, wall["init"][1]) for x in range(wall["init"][0], wall["end"][0]+1)]
-      print(self.walls)
-      self.walls
+
       self.tunnels = self.read_walls_or_tunnels(file_reader) 
 
   def read_points(self, reader):
