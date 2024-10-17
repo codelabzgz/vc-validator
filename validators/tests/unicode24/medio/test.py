@@ -4,7 +4,7 @@ sys.path.append("../../..")
 
 from unicode24_medio import MapConfig, validate_output
 
-config = MapConfig("input.txt") 
+config = MapConfig("input_medio.txt", 2) 
 
 def test_bad_route():
   # in test file, movements take origin to (40, 26)
@@ -69,16 +69,19 @@ def good():
   assert err == None, err
   print("Test good: OK")
 
+
+config = MapConfig("input_dificil.txt", 3)
+
 def main():
-  # test_bad_route()
-  # test_id_not_in_place()
-  # test_out_of_map_xlimit()
-  # test_out_of_map_ylimit()
-  # test_out_of_map_x0()
-  # test_out_of_map_y0()
-  # test_route_points_remaining()
-  # test_wall()
-  # test_wrong_movs_reported()
+  test_bad_route()
+  test_id_not_in_place()
+  test_out_of_map_xlimit()
+  test_out_of_map_ylimit()
+  test_out_of_map_x0()
+  test_out_of_map_y0()
+  test_route_points_remaining()
+  test_wall()
+  test_wrong_movs_reported()
   good()
 
 if __name__ == '__main__':

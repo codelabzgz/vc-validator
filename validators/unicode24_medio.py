@@ -12,26 +12,32 @@
 #   - Si se valida correctamente -> determinar puntuación en base a número de movimientos
 
 class MapConfig:
-  def __init__(self, config_file):
+  def __init__(self, config_file, level):
+    self.level = level
     with open(config_file, 'r') as file:
       file_reader = iter(file.readline, '')
       self.dim = tuple(map(int, next(file_reader).split(';'))) # (X, Y)
       self.initial_pos = tuple(next(file_reader).split(';')) # (x, y) 
       self.delivery_points = self.read_points(file_reader)
-      walls_ = self.read_walls_or_tunnels(file_reader) 
-      # Transform wall ranges into all the positions that contain a wall
-      # Otherwise, for every point you would have to check whether the drone
-      # crashes into a wall, because you can't tell from origin and end positions
-      # of the drone
-      self.walls = []
-      for wall in walls_:
-        # Walls are not diagonal
-        if wall["init"][0] == wall["end"][0]: # Vertical wall
-          self.walls += [(wall["init"][0], y) for y in range(wall["init"][1], wall["end"][1]+1)]
-        else: # Horizontal wall
-          self.walls += [(x, wall["init"][1]) for x in range(wall["init"][0], wall["end"][0]+1)]
+      if level > 1:
+        walls_ = self.read_walls_or_tunnels(file_reader) 
+        # Transform wall ranges into all the positions that contain a wall
+        # Otherwise, for every point you would have to check whether the drone
+        # crashes into a wall, because you can't tell from origin and end positions
+        # of the drone
+        self.walls = []
+        for wall in walls_:
+          # Walls are not diagonal
+          if wall["init"][0] == wall["end"][0]: # Vertical wall
+            self.walls += [(wall["init"][0], y) for y in range(wall["init"][1], wall["end"][1]+1)]
+          else: # Horizontal wall
+            self.walls += [(x, wall["init"][1]) for x in range(wall["init"][0], wall["end"][0]+1)]
 
-      self.tunnels = self.read_walls_or_tunnels(file_reader) 
+        self.tunnels = self.read_walls_or_tunnels(file_reader) 
+        
+      if level > 2:
+        self.drones = self.read_drones(file_reader) 
+        print("Drone func eval -> ",self.drones)
 
   def read_points(self, reader):
     """
@@ -64,6 +70,21 @@ class MapConfig:
       })
     return walls
   
+  def read_drones(self, reader):
+    """
+    Drone type: { x: T -> int, y: T -> int  }
+    Parse: expr,expr
+    """
+    total_drones = int(next(reader))
+    drones = []
+    for _ in range(total_drones):
+      next_drone = next(reader).split(',')
+      drones.append({
+        "x": next_drone[0],
+        "y": next_drone[1].strip(),
+      })
+    return drones
+  
   def find_point(self, point_id):
     filtered_point = list(filter(lambda point: point["point_id"] == point_id, self.delivery_points))
     return None if len(filtered_point) == 0 else filtered_point[0]
@@ -86,12 +107,20 @@ class MapConfig:
 
   def wall_at(self, pos):
     return len(list(filter(lambda wall: wall == pos, self.walls))) > 0 
+
+  def eval_drone_pos(self, drone, t):
+    drone_x = lambda T: eval(drone["x"])
+    drone_y = lambda T: eval(drone["y"])
+    return drone_x(t), drone_y(t)
+
+  def drone_at(self, pos, t):
+    return len(list(filter(lambda drone: self.eval_drone_pos(drone, t) == pos, self.drones))) > 0
   
-  def traverse_path(self, origin, movs):
+  def traverse_path(self, origin, movs, num_prev_movs):
     # origin -> (column, row)
     curr_pos = origin
     print(f"Path traversal from origin: {origin}")
-    for mov in movs:
+    for num_mov, mov in enumerate(movs):
       print(curr_pos)
       col, row = curr_pos 
       match mov:
@@ -114,10 +143,14 @@ class MapConfig:
         case other:
           return None, f"Unexpected movement type found: {other}"
 
-      if (tunnel_exit := self.tunnel_at(curr_pos)) is not None:
-        curr_pos = tunnel_exit
-      if self.wall_at(curr_pos):
-        return None, f"Drone crushed into a wall at {curr_pos}!!"
+      if self.level > 1:
+        if (tunnel_exit := self.tunnel_at(curr_pos)) is not None:
+          curr_pos = tunnel_exit
+        if self.wall_at(curr_pos):
+          return None, f"Drone crushed into a wall at {curr_pos}!!"
+      if self.level > 2:
+        if self.drone_at(curr_pos, num_mov+prev_movs):
+          return None, f"Your drone collided with another drone at {curr_pos} (Nobody was hurt ;)"
 
     return curr_pos, None
 
@@ -148,6 +181,7 @@ def validate_output(config, output_file):
   with open(output_file, 'r') as file:
     file_reader = iter(file.readline, '')
     reported_movs = int(next(file_reader))
+    total_movs = 0
     delivery_points = []
 
     curr_point = 1
@@ -162,7 +196,7 @@ def validate_output(config, output_file):
       
       print("Route is well placed")
       
-      coords, err = config.traverse_path(route["initial_coords"], route["movs"])
+      coords, err = config.traverse_path(route["initial_coords"], route["movs"], total_movs)
       if err != None:
         return None, err
       
@@ -171,12 +205,12 @@ def validate_output(config, output_file):
       if coords != (expected_coords := config.coords_of_id(route["point_id"])):
         return None, f"Movements to reach delivery point with id {route["point_id"]} from {route["initial_coords"]} end up at {coords}, expected {expected_coords}"
 
-      reported_movs -= len(route["movs"])
+      total_movs += len(route["movs"])
       delivery_points.append(route["point_id"])
       
       curr_point +=+ 1
 
-  if reported_movs != 0:
+  if reported_movs != total_movs: 
     return None, f"Reported movements at beginning of file don't match those in the routes, differ by {abs(reported_movs)}"
   if not config.contains_all_dpoints(delivery_points):
     return None, "Drone doesn't visit all of the delivery points" 
