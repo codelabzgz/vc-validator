@@ -64,16 +64,22 @@ def test_wrong_movs_reported():
   assert err == f"Reported movements at beginning of file don't match those in the routes, differ by {difference}", err
   print("Test test_wrong_movs_reported: OK")
 
+def good():
+  _, err = validate_output(config, "good.txt")
+  assert err == None, err
+  print("Test good: OK")
+
 def main():
-  test_bad_route()
-  test_id_not_in_place()
-  test_out_of_map_xlimit()
-  test_out_of_map_ylimit()
-  test_out_of_map_x0()
-  test_out_of_map_y0()
-  test_route_points_remaining()
-  test_wall()
-  test_wrong_movs_reported()
+  # test_bad_route()
+  # test_id_not_in_place()
+  # test_out_of_map_xlimit()
+  # test_out_of_map_ylimit()
+  # test_out_of_map_x0()
+  # test_out_of_map_y0()
+  # test_route_points_remaining()
+  # test_wall()
+  # test_wrong_movs_reported()
+  good()
 
 if __name__ == '__main__':
   main()

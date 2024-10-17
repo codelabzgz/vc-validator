@@ -75,8 +75,15 @@ class MapConfig:
     return point["s"]if point else None
 
   def tunnel_at(self, pos):
-    filtered_tun = list(filter(lambda tun: tun == pos, self.tunnels))
-    return filtered_tun[0] if len(filtered_tun) > 0 else None
+    filtered_tun = list(filter(lambda tun: tun["init"] == pos or tun["end"] == pos, self.tunnels))
+    if len(filtered_tun) == 0:
+      return None
+
+    tun = filtered_tun[0]
+    if tun["init"] == pos:
+      return tun["end"]
+    else:
+      return tun["init"]
 
   def wall_at(self, pos):
     return len(list(filter(lambda wall: wall == pos, self.walls))) > 0 
@@ -123,7 +130,8 @@ class MapConfig:
   def contains_all_dpoints(self, ids):
     expected_ids = set(map(lambda p: p["point_id"], self.delivery_points))
     received_ids = set(ids)
-    return expected_ids - received_ids == {}
+    # not bool({}) == True
+    return not bool(expected_ids - received_ids)
 
 
 
@@ -173,6 +181,8 @@ def validate_output(config, output_file):
     return None, f"Reported movements at beginning of file don't match those in the routes, differ by {abs(reported_movs)}"
   if not config.contains_all_dpoints(delivery_points):
     return None, "Drone doesn't visit all of the delivery points" 
+  
+  return route["movs"], None
 
 def score(solution):
   return 1
