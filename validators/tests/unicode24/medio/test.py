@@ -2,7 +2,7 @@ import sys
 
 sys.path.append("../../..")
 
-from unicode24_medio import MapConfig, validate_output
+from unicode24 import MapConfig, validate_output
 
 
 def test_bad_route(config):

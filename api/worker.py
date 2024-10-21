@@ -1,8 +1,10 @@
-from fastapi import FastAPI, HTTPException, staticfiles
 from datetime import datetime
-from models.req import EventData
-from validators import onePizza, fibonacci
 from os import getenv as env
+
+from fastapi import FastAPI, HTTPException, staticfiles
+
+from models.req import EventData
+from validators import fibonacci, onePizza, unicode24
 
 app = FastAPI()
 app.mount(
@@ -85,3 +87,16 @@ async def validator_fibonacci(data: EventData):
             status_code=500,
             detail=f"Internal Server Error: {str(e)}"
         )
+
+@app.post("/validator/unicode24")
+async def validator_unicode24(data: EventData):
+    match data.difficulty:
+        case 1:
+            config = unicode24.MapConfig("static/unicode24_facil", data.difficulty)
+        case 2:
+            config = unicode24.MapConfig("static/unicode24_medio", data.difficulty)
+        case 3:
+            config = unicode24.MapConfig("static/unicode24_dificil", data.difficulty)
+    scoring_param, err = unicode24.validate_output(config, data.files[0]) 
+    data.files[0].tests[0].success = err is not None 
+    data.files[0].tests[0].points = 0 if err is None else unicode24.score(scoring_param) 
