@@ -11,13 +11,16 @@
 # Cosas a evaluar
 #   - Si se valida correctamente -> determinar puntuación en base a número de movimientos
 
+import re
+
+
 class MapConfig:
   def __init__(self, config_file, level):
     self.level = level
     with open(config_file, 'r') as file:
       file_reader = iter(file.readline, '')
       self.dim = tuple(map(int, next(file_reader).split(';'))) # (X, Y)
-      self.initial_pos = tuple(next(file_reader).split(';')) # (x, y) 
+      self.initial_pos = tuple(next(file_reader).split(',')) # (x, y) 
       self.delivery_points = self.read_points(file_reader)
       if level > 1:
         walls_ = self.read_walls_or_tunnels(file_reader) 
@@ -47,7 +50,7 @@ class MapConfig:
     total_points = int(next(reader)) 
     delivery_points = []
     for point in range(total_points):
-      next_point = next(reader).split(';') 
+      next_point = next(reader).split(',') 
       delivery_points.append({
         "point_id": point + 1,
         "coords": (int(next_point[0]), int(next_point[1])),
@@ -63,10 +66,10 @@ class MapConfig:
     total_walls = int(next(reader))
     walls = []
     for wall in range(total_walls):
-      next_wall = next(reader).split(':')
+      next_wall = next(reader).split(';')
       walls.append({
-        "init": tuple(map(int, next_wall[0].split(';'))),
-        "end": tuple(map(int, next_wall[1].split(';')))
+        "init": tuple(map(int, next_wall[0].split(','))),
+        "end": tuple(map(int, next_wall[1].split(',')))
       })
     return walls
   
@@ -109,50 +112,69 @@ class MapConfig:
     return len(list(filter(lambda wall: wall == pos, self.walls))) > 0 
 
   def eval_drone_pos(self, drone, t):
-    drone_x = lambda T: eval(drone["x"])
-    drone_y = lambda T: eval(drone["y"])
-    return drone_x(t), drone_y(t)
+    drone_x = lambda T: eval(drone["x"]) % self.dim[0]
+    drone_y = lambda T: eval(drone["y"]) % self.dim[1]
+    return (drone_x(t), drone_y(t))
+  
+  def check_drone_collision(self, drone, t, pos, prev_pos):
+    drone_prev_pos = self.eval_drone_pos(drone, t-1)
+    drone_curr_pos = self.eval_drone_pos(drone, t)
+    if drone_prev_pos[0] == drone_curr_pos[0] and pos[0] == prev_pos[0]: # Movimiento eje vertical de ambos
+      return drone_curr_pos == pos or drone_prev_pos == pos
+    elif drone_prev_pos[1] == drone_curr_pos[1] and pos[1] == prev_pos[1]: # Movimiento eje horizontal de ambos
+      return drone_curr_pos == pos or drone_prev_pos == pos
+    else:
+      return drone_curr_pos == pos
 
-  def drone_at(self, pos, t):
-    return len(list(filter(lambda drone: self.eval_drone_pos(drone, t) == pos, self.drones))) > 0
+
+  def drone_at(self, pos, prev_pos, t):
+    return len(list(filter(lambda drone: self.check_drone_collision(drone, t, pos, prev_pos), self.drones))) > 0
   
   def traverse_path(self, origin, movs, num_prev_movs):
     # origin -> (column, row)
     curr_pos = origin
+    matched_movs = re.findall(r'\d+[><+-]', movs)
     print(f"Path traversal from origin: {origin}")
-    for num_mov, mov in enumerate(movs):
-      print(curr_pos)
-      col, row = curr_pos 
-      match mov:
-        case '>':
-          if col+1 >= self.dim[0]:
-            return None, f"Drone gets out of map at X={self.dim[0]}" 
-          curr_pos = (col+1, row)
-        case '<':
-          if col <= 0:
-            return None, "Drone gets out of map at X=0" 
-          curr_pos = (col-1, row)
-        case '+':
-          if row <= 0:
-            return None, "Drone gets out of map at Y=0" 
-          curr_pos = (col, row-1)
-        case '-':
-          if row+1 >= self.dim[1]:
-            return None, f"Drone gets out of map at Y={self.dim[1]}"
-          curr_pos = (col, row+1)
-        case other:
-          return None, f"Unexpected movement type found: {other}"
+    total_path_movements = 0
+    prev_pos = curr_pos
+    for mov in matched_movs:
+      num_movs_of_type, mov_type = int(mov[:-1]), mov[-1]
+      for num_mov in range(num_movs_of_type): 
+        print(curr_pos)
+        col, row = curr_pos 
+        match mov_type:
+          case '>':
+            if col+1 >= self.dim[0]:
+              return None, None, f"Drone gets out of map at X={self.dim[0]}" 
+            curr_pos = (col+1, row)
+          case '<':
+            if col-1 < 0:
+              return None, None, "Drone gets out of map at X<0" 
+            curr_pos = (col-1, row)
+          case '+':
+            if row-1 < 0:
+              return None, None, "Drone gets out of map at Y<0" 
+            curr_pos = (col, row-1)
+          case '-':
+            if row+1 >= self.dim[1]:
+              return None, None, f"Drone gets out of map at Y={self.dim[1]}"
+            curr_pos = (col, row+1)
+          case other:
+            return None, None, f"Unexpected movement type found: {other}"
 
-      if self.level > 1:
-        if (tunnel_exit := self.tunnel_at(curr_pos)) is not None:
-          curr_pos = tunnel_exit
-        if self.wall_at(curr_pos):
-          return None, f"Drone crushed into a wall at {curr_pos}!!"
-      if self.level > 2:
-        if self.drone_at(curr_pos, num_mov+prev_movs):
-          return None, f"Your drone collided with another drone at {curr_pos} (Nobody was hurt ;)"
+        if self.level > 1:
+          if (tunnel_exit := self.tunnel_at(curr_pos)) is not None:
+            curr_pos = tunnel_exit
+          if self.wall_at(curr_pos):
+            return None, None, f"Drone crushed into a wall at {curr_pos}!!"
+        if self.level > 2:
+          if self.drone_at(curr_pos, prev_pos, num_mov+total_path_movements+num_prev_movs):
+            return None, None, f"Your drone collided with another drone at {curr_pos} (Nobody was hurt ;)"
+        prev_pos = curr_pos
+        
+      total_path_movements += num_movs_of_type
 
-    return curr_pos, None
+    return curr_pos, total_path_movements, None
 
 
   def coords_of_id(self, point_id):
@@ -171,7 +193,7 @@ def parse_route(raw_route):
   [ point_id, initial_coords, movs ] = raw_route.split(';')
   return {
     "point_id": int(point_id),
-    "initial_coords": tuple(map(int, initial_coords.split('-'))),
+    "initial_coords": tuple(map(int, initial_coords.split(','))),
     "movs": movs.strip()
   }
 
@@ -196,7 +218,7 @@ def validate_output(config, output_file):
       
       print("Route is well placed")
       
-      coords, err = config.traverse_path(route["initial_coords"], route["movs"], total_movs)
+      coords, path_movs, err = config.traverse_path(route["initial_coords"], route["movs"], total_movs)
       if err != None:
         return None, err
       
@@ -205,13 +227,13 @@ def validate_output(config, output_file):
       if coords != (expected_coords := config.coords_of_id(route["point_id"])):
         return None, f"Movements to reach delivery point with id {route["point_id"]} from {route["initial_coords"]} end up at {coords}, expected {expected_coords}"
 
-      total_movs += len(route["movs"])
+      total_movs += path_movs 
       delivery_points.append(route["point_id"])
       
       curr_point +=+ 1
 
   if reported_movs != total_movs: 
-    return None, f"Reported movements at beginning of file don't match those in the routes, differ by {abs(reported_movs)}"
+    return None, f"Reported movements at beginning of file don't match those in the routes, differ by {abs(reported_movs-total_movs)}"
   if not config.contains_all_dpoints(delivery_points):
     return None, "Drone doesn't visit all of the delivery points" 
   
