@@ -94,6 +94,7 @@ async def validator_fibonacci(data: EventData):
 
 @app.post("/validator/unicode24")
 async def validator_unicode24(data: EventData):
+    print(data.files[0].tests)
     match data.difficulty:
         case 'easy' | 'very easy': 
             config = unicode24_easy_ds 
@@ -104,4 +105,11 @@ async def validator_unicode24(data: EventData):
     scoring_param, err = unicode24.validate_output(config, data.files[0].content) 
     data.files[0].tests[0].success = err is None 
     data.files[0].tests[0].points = 0 if err is not None else unicode24.score(scoring_param) 
+    data.files[0].tests[0] = {
+        "id": 1,
+        "input": "2 3",
+        "actual": "3",
+        "success": err is None,
+        "points": 0 if err is not None else unicode24.score(scoring_param) 
+    }
     return data
