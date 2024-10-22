@@ -199,38 +199,38 @@ def parse_route(raw_route):
 
 
 
-def validate_output(config, output_file):
-  with open(output_file, 'r') as file:
-    file_reader = iter(file.readline, '')
-    reported_movs = int(next(file_reader))
-    total_movs = 0
-    delivery_points = []
+def validate_output(config, file_content):
+  file_content = file_content.split('\n')
+  reported_movs = int(file_content[0])
+  print("OK")
+  total_movs = 0
+  delivery_points = []
 
-    curr_point = 1
-    for route in file_reader:
-      print(f"--- PROCESSING ROUTE AT LINE {curr_point} ---")
-      
-      route = parse_route(route)
-      print(f"Route info: {route}")
+  curr_point = 1
+  for route in file_content[1:]:
+    print(f"--- PROCESSING ROUTE AT LINE {curr_point} ---")
+    
+    route = parse_route(route)
+    print(f"Route info: {route}")
 
-      if (pos := config.has_required_position(route["point_id"])) is not None and curr_point != pos:
-        return None, f"Delivery point with id {route["point_id"]} needs to be at position {pos}, found at {curr_point}"
-      
-      print("Route is well placed")
-      
-      coords, path_movs, err = config.traverse_path(route["initial_coords"], route["movs"], total_movs)
-      if err != None:
-        return None, err
-      
-      print("Drone doesn't crash or get out of map")
-      
-      if coords != (expected_coords := config.coords_of_id(route["point_id"])):
-        return None, f"Movements to reach delivery point with id {route["point_id"]} from {route["initial_coords"]} end up at {coords}, expected {expected_coords}"
+    if (pos := config.has_required_position(route["point_id"])) is not None and curr_point != pos:
+      return None, f"Delivery point with id {route["point_id"]} needs to be at position {pos}, found at {curr_point}"
+    
+    print("Route is well placed")
+    
+    coords, path_movs, err = config.traverse_path(route["initial_coords"], route["movs"], total_movs)
+    if err != None:
+      return None, err
+    
+    print("Drone doesn't crash or get out of map")
+    
+    if coords != (expected_coords := config.coords_of_id(route["point_id"])):
+      return None, f"Movements to reach delivery point with id {route["point_id"]} from {route["initial_coords"]} end up at {coords}, expected {expected_coords}"
 
-      total_movs += path_movs 
-      delivery_points.append(route["point_id"])
-      
-      curr_point +=+ 1
+    total_movs += path_movs 
+    delivery_points.append(route["point_id"])
+    
+    curr_point +=+ 1
 
   if reported_movs != total_movs: 
     return None, f"Reported movements at beginning of file don't match those in the routes, differ by {abs(reported_movs-total_movs)}"
@@ -240,4 +240,4 @@ def validate_output(config, output_file):
   return route["movs"], None
 
 def score(solution):
-  return 1
+  return 1000

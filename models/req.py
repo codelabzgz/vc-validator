@@ -46,7 +46,7 @@ class File(BaseModel):
 class EventData(BaseModel):
     event: str
     title: str
-    difficulty: int 
+    difficulty: str 
     points: int
     validator: Optional[str] = None
     runner: Optional[str] = None

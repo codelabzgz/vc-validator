@@ -14,6 +14,10 @@ app.mount(
 )
 
 
+unicode24_easy_ds = unicode24.MapConfig("api/static/unicode24_facil.txt", 1)
+unicode24_medium_ds = unicode24.MapConfig("api/static/unicode24_medio.txt", 2)
+unicode24_hard_ds = unicode24.MapConfig("api/static/unicode24_dificil.txt", 3)
+
 @app.get("/health")
 async def health_check():
     """
@@ -91,12 +95,13 @@ async def validator_fibonacci(data: EventData):
 @app.post("/validator/unicode24")
 async def validator_unicode24(data: EventData):
     match data.difficulty:
-        case 1:
-            config = unicode24.MapConfig("static/unicode24_facil", data.difficulty)
-        case 2:
-            config = unicode24.MapConfig("static/unicode24_medio", data.difficulty)
-        case 3:
-            config = unicode24.MapConfig("static/unicode24_dificil", data.difficulty)
-    scoring_param, err = unicode24.validate_output(config, data.files[0]) 
-    data.files[0].tests[0].success = err is not None 
-    data.files[0].tests[0].points = 0 if err is None else unicode24.score(scoring_param) 
+        case 'easy' | 'very easy': 
+            config = unicode24_easy_ds 
+        case 'medium':
+            config = unicode24_medium_ds 
+        case 'hard' | 'insane':
+            config = unicode24_hard_ds 
+    scoring_param, err = unicode24.validate_output(config, data.files[0].content) 
+    data.files[0].tests[0].success = err is None 
+    data.files[0].tests[0].points = 0 if err is not None else unicode24.score(scoring_param) 
+    return data
