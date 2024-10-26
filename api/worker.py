@@ -16,7 +16,7 @@ app.mount(
 
 unicode24_easy_ds = unicode24.MapConfig("api/static/unicode24_facil.txt", 1)
 unicode24_medium_ds = unicode24.MapConfig("api/static/unicode24_medio.txt", 2)
-unicode24_hard_ds = unicode24.MapConfig("api/static/unicode24_dificil.txt", 3)
+# unicode24_hard_ds = unicode24.MapConfig("api/static/unicode24_dificil.txt", 3)
 
 @app.get("/health")
 async def health_check():
@@ -101,7 +101,7 @@ async def validator_unicode24(data: EventData):
             case 'medium':
                 config = unicode24_medium_ds 
             case 'hard' | 'insane':
-                config = unicode24_hard_ds 
+                config = unicode24_easy_ds
         scoring_param, err = unicode24.validate_output(config, data.files[0].content) 
         data.files[0].tests[0] = {
             "id": 1,

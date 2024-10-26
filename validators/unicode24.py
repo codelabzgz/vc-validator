@@ -40,7 +40,6 @@ class MapConfig:
         
       if level > 2:
         self.drones = self.read_drones(file_reader) 
-        print("Drone func eval -> ",self.drones)
 
   def read_points(self, reader):
     """
@@ -75,16 +74,22 @@ class MapConfig:
   
   def read_drones(self, reader):
     """
-    Drone type: { x: T -> int, y: T -> int  }
-    Parse: expr,expr
+    Drone type: { position: (X,Y); movs: unfolded_movs; next_mov: index of next mov in movs  }
+    Parse: X,Y;movs 
     """
     total_drones = int(next(reader))
     drones = []
     for _ in range(total_drones):
-      next_drone = next(reader).split(',')
+      next_drone = next(reader).split(';')
+      matched_movs = re.findall(r'\d+[><+-]', next_drone[1])
+      unfolded_movs = ""
+      for mov in matched_movs:
+        num_movs_of_type, mov_type = int(mov[:-1]), mov[-1]
+        unfolded_movs += mov_type * num_movs_of_type
       drones.append({
-        "x": next_drone[0],
-        "y": next_drone[1].strip(),
+        "position": tuple(map(int, next_drone[0].split(','))), 
+        "movs": unfolded_movs, 
+        "next_mov": 0 
       })
     return drones
   
@@ -111,26 +116,60 @@ class MapConfig:
   def wall_at(self, pos):
     return len(list(filter(lambda wall: wall == pos, self.walls))) > 0 
 
-  def eval_drone_pos(self, drone, t):
-    drone_x = lambda T: eval(drone["x"]) % self.dim[0]
-    drone_y = lambda T: eval(drone["y"]) % self.dim[1]
-    return (drone_x(t), drone_y(t))
-  
-  def check_drone_collision(self, drone, t, pos, prev_pos):
-    drone_prev_pos = self.eval_drone_pos(drone, t-1)
-    drone_curr_pos = self.eval_drone_pos(drone, t)
-    if drone_prev_pos[0] == drone_curr_pos[0] and pos[0] == prev_pos[0]: # Movimiento eje vertical de ambos
-      return drone_curr_pos == pos or drone_prev_pos == pos
-    elif drone_prev_pos[1] == drone_curr_pos[1] and pos[1] == prev_pos[1]: # Movimiento eje horizontal de ambos
-      return drone_curr_pos == pos or drone_prev_pos == pos
+  def check_drone_collision(self, drone, pos, prev_pos):
+    drone_prev_pos = drone["position"]
+    drone_next_pos, err = self.move_drone(drone_prev_pos, drone["movs"][drone["next_mov"]]) 
+    if err is not None:
+      drone_next_pos = (drone_next_pos[0] % self.dim[1], drone_next_pos[1] % self.dim[0])
+    if drone_prev_pos[0] == drone_next_pos[0] and pos[0] == prev_pos[0]: # Movimiento eje vertical de ambos
+      return drone_next_pos == pos or drone_prev_pos == pos
+    elif drone_prev_pos[1] == drone_next_pos[1] and pos[1] == prev_pos[1]: # Movimiento eje horizontal de ambos
+      return drone_next_pos == pos or drone_prev_pos == pos
     else:
-      return drone_curr_pos == pos
+      return drone_next_pos == pos
 
 
-  def drone_at(self, pos, prev_pos, t):
-    return len(list(filter(lambda drone: self.check_drone_collision(drone, t, pos, prev_pos), self.drones))) > 0
+  def drone_at(self, pos, prev_pos):
+    return len(list(filter(lambda drone: self.check_drone_collision(drone, pos, prev_pos), self.drones))) > 0
   
-  def traverse_path(self, origin, movs, num_prev_movs):
+  def update_drones_positions(self):
+    
+    for drone in self.drones:
+      drone_next_move = drone["movs"][drone["next_mov"]]
+      drone_next_pos, err = self.move_drone(drone["position"], drone_next_move)
+      if err is not None:
+        drone_next_pos = (drone_next_pos[0] % self.dim[1], drone_next_pos[1] % self.dim[0])
+      drone["position"] = drone_next_pos 
+      drone["next_mov"] = (drone["next_mov"] + 1) % len(drone["movs"])
+  
+
+  def move_drone(self, pos, mov_type):
+    col, row = pos 
+    final_pos, err = None, None
+    match mov_type:
+      case '>':
+        if col+1 >= self.dim[0]:
+          err = f"Drone gets out of map at X={self.dim[0]}" 
+        final_pos = (col+1, row)
+      case '<':
+        if col-1 < 0:
+          err = "Drone gets out of map at X<0" 
+        final_pos = (col-1, row)
+      case '+':
+        if row-1 < 0:
+          err = "Drone gets out of map at Y<0" 
+        final_pos = (col, row-1)
+      case '-':
+        if row+1 >= self.dim[1]:
+          err = f"Drone gets out of map at Y={self.dim[1]}"
+        final_pos = (col, row+1)
+      case other:
+        err = f"Unexpected movement type found: {other}"
+    return final_pos, err
+    
+
+  
+  def traverse_path(self, origin, movs):
     # origin -> (column, row)
     curr_pos = origin
     matched_movs = re.findall(r'\d+[><+-]', movs)
@@ -141,26 +180,9 @@ class MapConfig:
       num_movs_of_type, mov_type = int(mov[:-1]), mov[-1]
       for num_mov in range(num_movs_of_type): 
         print(curr_pos)
-        col, row = curr_pos 
-        match mov_type:
-          case '>':
-            if col+1 >= self.dim[0]:
-              return None, None, f"Drone gets out of map at X={self.dim[0]}" 
-            curr_pos = (col+1, row)
-          case '<':
-            if col-1 < 0:
-              return None, None, "Drone gets out of map at X<0" 
-            curr_pos = (col-1, row)
-          case '+':
-            if row-1 < 0:
-              return None, None, "Drone gets out of map at Y<0" 
-            curr_pos = (col, row-1)
-          case '-':
-            if row+1 >= self.dim[1]:
-              return None, None, f"Drone gets out of map at Y={self.dim[1]}"
-            curr_pos = (col, row+1)
-          case other:
-            return None, None, f"Unexpected movement type found: {other}"
+        curr_pos, err = self.move_drone(curr_pos, mov_type)
+        if err is not None:
+          return None, None, err
 
         if self.level > 1:
           if (tunnel_exit := self.tunnel_at(curr_pos)) is not None:
@@ -168,8 +190,9 @@ class MapConfig:
           if self.wall_at(curr_pos):
             return None, None, f"Drone crushed into a wall at {curr_pos}!!"
         if self.level > 2:
-          if self.drone_at(curr_pos, prev_pos, num_mov+total_path_movements+num_prev_movs):
+          if self.drone_at(curr_pos, prev_pos):
             return None, None, f"Your drone collided with another drone at {curr_pos} (Nobody was hurt ;)"
+          self.update_drones_positions()
         prev_pos = curr_pos
         
       total_path_movements += num_movs_of_type
@@ -190,6 +213,7 @@ class MapConfig:
 
 
 def parse_route(raw_route):
+  print(raw_route)
   [ point_id, initial_coords, movs ] = raw_route.split(';')
   return {
     "point_id": int(point_id),
@@ -200,9 +224,10 @@ def parse_route(raw_route):
 
 
 def validate_output(config, file_content):
+  print(file_content)
   file_content = file_content.split('\n')
+  print(file_content)
   reported_movs = int(file_content[0])
-  print("OK")
   total_movs = 0
   delivery_points = []
 
@@ -218,7 +243,7 @@ def validate_output(config, file_content):
     
     print("Route is well placed")
     
-    coords, path_movs, err = config.traverse_path(route["initial_coords"], route["movs"], total_movs)
+    coords, path_movs, err = config.traverse_path(route["initial_coords"], route["movs"])
     if err != None:
       return None, err
     
