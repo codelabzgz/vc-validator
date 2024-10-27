@@ -233,6 +233,8 @@ def validate_output(config, file_content):
 
   curr_point = 1
   for route in file_content[1:]:
+    if route.strip() == "":
+      continue
     print(f"--- PROCESSING ROUTE AT LINE {curr_point} ---")
     
     route = parse_route(route)
@@ -262,7 +264,7 @@ def validate_output(config, file_content):
   if not config.contains_all_dpoints(delivery_points):
     return None, "Drone doesn't visit all of the delivery points" 
   
-  return route["movs"], None
+  return reported_movs, None
 
 def score(solution):
   return 1000
