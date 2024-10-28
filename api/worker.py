@@ -1,8 +1,6 @@
 from datetime import datetime
 from os import getenv as env
-
 from fastapi import FastAPI, HTTPException, staticfiles
-
 from models.req import EventData
 from validators import fibonacci, onePizza, unicode24
 
@@ -14,9 +12,9 @@ app.mount(
 )
 
 
-unicode24_easy_ds = unicode24.MapConfig("api/static/unicode24_facil.txt", 1)
-unicode24_medium_ds = unicode24.MapConfig("api/static/unicode24_medio.txt", 2)
-# unicode24_hard_ds = unicode24.MapConfig("api/static/unicode24_dificil.txt", 3)
+unicode24_easy_ds = unicode24.MapConfig("api/static/unicode-24/easy.txt", 1)
+unicode24_medium_ds = unicode24.MapConfig("api/static/unicode-24/medium.txt", 2)
+unicode24_hard_ds = unicode24.MapConfig("api/static/unicode-24/hard.txt", 3)
 
 @app.get("/health")
 async def health_check():
@@ -41,7 +39,7 @@ async def validator_one_pizza(data: EventData):
             content = file.content
 
             # procesa el archivo base con el que se compara la entrada del usuario
-            with open(f'api/static/{filename}', 'r', encoding='utf-8') as f:
+            with open(f'api/static/one-pizza/{filename}', 'r', encoding='utf-8') as f:
                 infile_content = f.readlines()
                 _, clients = onePizza.parse_input_file(infile_content)
             
@@ -92,20 +90,27 @@ async def validator_fibonacci(data: EventData):
             detail=f"Internal Server Error: {str(e)}"
         )
 
-@app.post("/validator/unicode24")
+@app.post("/validator/unicode-24")
 async def validator_unicode24(data: EventData):
     try:
+        filename = data.difficulty + ".txt"
         match data.difficulty:
             case 'easy' | 'very easy': 
-                config = unicode24_easy_ds 
+                config = unicode24_easy_ds
             case 'medium':
                 config = unicode24_medium_ds 
             case 'hard' | 'insane':
                 config = unicode24_easy_ds
-        scoring_param, err = unicode24.validate_output(config, data.files[0].content) 
+
+        scoring_param, err = unicode24.validate_output(config, data.files[0].content)
         data.files[0].tests[0] = {
             "id": 1,
-            "input": "2 3",
+            "input": {
+                "file": {
+                    "name": filename,
+                    "path": f"{env("API_URL")}/static/unicode-24/{filename}",
+                }
+            },
             "actual": err,
             "success": err is None,
             "points": 0 if err is not None else unicode24.score(scoring_param) 
