@@ -14,7 +14,7 @@ app.mount(
 
 unicode24_easy_ds = unicode24.MapConfig("api/static/unicode-24/easy.txt", 1)
 unicode24_medium_ds = unicode24.MapConfig("api/static/unicode-24/medium.txt", 2)
-unicode24_hard_ds = unicode24.MapConfig("api/static/unicode-24/hard.txt", 3)
+# unicode24_hard_ds = unicode24.MapConfig("api/static/unicode-24/hard.txt", 3)
 
 @app.get("/health")
 async def health_check():
@@ -47,6 +47,7 @@ async def validator_one_pizza(data: EventData):
             pizza = onePizza.parse_output_file(content)
 
             score = onePizza.calculate_score(clients, pizza)
+            print(score)
 
             data.points = max(data.points, score)
             file.tests.append({
@@ -54,7 +55,7 @@ async def validator_one_pizza(data: EventData):
                 "input": {
                     "file": {
                         "name": filename,
-                        "path": f"{env("API_URL")}/static/{filename}",
+                        "path": f"{env("API_URL")}/static/one-pizza/{filename}",
                     }
                 },
                 "actual": content,
