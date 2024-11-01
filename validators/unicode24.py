@@ -89,15 +89,6 @@ class MapConfig:
       })
     return drones
   
-  def has_required_position(self, point_id):
-    return self.delivery_points[point_id-1]["s"] 
-
-  def tunnel_at(self, pos):
-    try:
-      return self.tunnels[f"{pos}"] 
-    except:
-      return None
-
   def wall_at(self, pos):
     return pos in self.walls
 
@@ -159,7 +150,7 @@ class MapConfig:
       raise Exception(err) 
 
     if self.level > 1:
-      if (tunnel_exit := self.tunnel_at(curr_pos)) is not None:
+      if (tunnel_exit := self.tunnels.get(f"{curr_pos}")) is not None:
         curr_pos = tunnel_exit
       if self.wall_at(curr_pos):
         raise Exception(f"Drone crushed into a wall at {curr_pos}!!")
@@ -182,9 +173,6 @@ class MapConfig:
         
     return curr_pos, num_movs, None
 
-
-  def coords_of_id(self, point_id):
-    return self.delivery_points[point_id-1]["coords"]
 
   def contains_all_dpoints(self, ids):
     expected_ids = set([i+1 for i in range(len(self.delivery_points))])
@@ -221,7 +209,7 @@ def validate_output(config, file_content):
     route = parse_route(route)
     # print(f"Route info: {route}")
 
-    if (pos := config.has_required_position(route["point_id"])) is not None and curr_point != pos:
+    if (pos := config.delivery_points[route["point_id"]-1].get("s")) is not None and curr_point != pos:
       return None, f"Delivery point with id {route["point_id"]} needs to be at position {pos}, found at {curr_point}"
     
     # print("Route is well placed")
@@ -232,7 +220,7 @@ def validate_output(config, file_content):
     
     # print("Drone doesn't crash or get out of map")
     
-    if coords != (expected_coords := config.coords_of_id(route["point_id"])):
+    if coords != (expected_coords := config.delivery_points[route["point_id"]-1].get("coords")):
       return None, f"Movements to reach delivery point with id {route["point_id"]} from {route["initial_coords"]} end up at {coords}, expected {expected_coords}"
 
     total_movs += path_movs 
