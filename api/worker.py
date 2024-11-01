@@ -1,4 +1,3 @@
-import cProfile
 from datetime import datetime
 from os import getenv as env
 
@@ -105,9 +104,7 @@ async def validator_unicode24(data: EventData):
                 config = unicode24_medium_ds 
             case 'hard' | 'insane':
                 config = unicode24_easy_ds
-        with cProfile.Profile() as pr:
-            scoring_param, err = unicode24.validate_output(config, data.files[0].content)
-            pr.print_stats()
+        scoring_param, err = unicode24.validate_output(config, data.files[0].content)
         data.files[0].tests[0] = {
             "id": 1,
             "input": {
