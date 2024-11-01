@@ -1,6 +1,9 @@
+import cProfile
 from datetime import datetime
 from os import getenv as env
+
 from fastapi import FastAPI, HTTPException, staticfiles
+
 from models.req import EventData
 from validators import fibonacci, onePizza, unicode24
 
@@ -102,8 +105,9 @@ async def validator_unicode24(data: EventData):
                 config = unicode24_medium_ds 
             case 'hard' | 'insane':
                 config = unicode24_easy_ds
-
-        scoring_param, err = unicode24.validate_output(config, data.files[0].content)
+        with cProfile.Profile() as pr:
+            scoring_param, err = unicode24.validate_output(config, data.files[0].content)
+            pr.print_stats()
         data.files[0].tests[0] = {
             "id": 1,
             "input": {

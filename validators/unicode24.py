@@ -11,6 +11,7 @@
 # Cosas a evaluar
 #   - Si se valida correctamente -> determinar puntuación en base a número de movimientos
 
+import functools
 import re
 
 
@@ -35,8 +36,11 @@ class MapConfig:
             self.walls += [(wall["init"][0], y) for y in range(wall["init"][1], wall["end"][1]+1)]
           else: # Horizontal wall
             self.walls += [(x, wall["init"][1]) for x in range(wall["init"][0], wall["end"][0]+1)]
-
-        self.tunnels = self.read_walls_or_tunnels(file_reader) 
+        self.walls = set(self.walls)
+        self.tunnels = {}
+        for tun in self.read_walls_or_tunnels(file_reader):
+          self.tunnels[f"{tun["init"]}"] = tun["end"]
+          self.tunnels[f"{tun["end"]}"] = tun["init"]
         
       if level > 2:
         self.drones = self.read_drones(file_reader) 
@@ -47,15 +51,11 @@ class MapConfig:
     Parse: X;Y[;S]
     """
     total_points = int(next(reader)) 
-    delivery_points = []
-    for point in range(total_points):
-      next_point = next(reader).split(',') 
-      delivery_points.append({
-        "point_id": point + 1,
+    return [{
         "coords": (int(next_point[0]), int(next_point[1])),
         "s": None if len(next_point) <= 2 else int(next_point[2])
-      })
-    return delivery_points
+    } for _ in range(total_points) if (next_point := next(reader).split(','))] 
+    
 
   def read_walls_or_tunnels(self, reader):
     """
@@ -63,14 +63,10 @@ class MapConfig:
     Parse: Xinit;Yinit:Xend;Yend
     """
     total_walls = int(next(reader))
-    walls = []
-    for wall in range(total_walls):
-      next_wall = next(reader).split(';')
-      walls.append({
-        "init": tuple(map(int, next_wall[0].split(','))),
-        "end": tuple(map(int, next_wall[1].split(',')))
-      })
-    return walls
+    return [{
+      "init": tuple(map(int, next_wall[0].split(','))),
+      "end": tuple(map(int, next_wall[1].split(',')))
+    } for _ in range(total_walls) if (next_wall := next(reader).split(';'))]
   
   def read_drones(self, reader):
     """
@@ -93,28 +89,17 @@ class MapConfig:
       })
     return drones
   
-  def find_point(self, point_id):
-    filtered_point = list(filter(lambda point: point["point_id"] == point_id, self.delivery_points))
-    return None if len(filtered_point) == 0 else filtered_point[0]
-
   def has_required_position(self, point_id):
-    point = self.find_point(point_id)
-    print(f"Specific position is required for point id {point_id}: {point}")
-    return point["s"]if point else None
+    return self.delivery_points[point_id-1]["s"] 
 
   def tunnel_at(self, pos):
-    filtered_tun = list(filter(lambda tun: tun["init"] == pos or tun["end"] == pos, self.tunnels))
-    if len(filtered_tun) == 0:
+    try:
+      return self.tunnels[f"{pos}"] 
+    except:
       return None
 
-    tun = filtered_tun[0]
-    if tun["init"] == pos:
-      return tun["end"]
-    else:
-      return tun["init"]
-
   def wall_at(self, pos):
-    return len(list(filter(lambda wall: wall == pos, self.walls))) > 0 
+    return pos in self.walls
 
   def check_drone_collision(self, drone, pos, prev_pos):
     drone_prev_pos = drone["position"]
@@ -143,69 +128,66 @@ class MapConfig:
       drone["next_mov"] = (drone["next_mov"] + 1) % len(drone["movs"])
   
 
-  def move_drone(self, pos, mov_type):
+  def move_drone(self, pos, mov_type, num_movs=1):
     col, row = pos 
     final_pos, err = None, None
     match mov_type:
       case '>':
-        if col+1 >= self.dim[0]:
+        if col+num_movs >= self.dim[0]:
           err = f"Drone gets out of map at X={self.dim[0]}" 
-        final_pos = (col+1, row)
+        final_pos = (col+num_movs, row)
       case '<':
-        if col-1 < 0:
+        if col-num_movs < 0:
           err = "Drone gets out of map at X<0" 
-        final_pos = (col-1, row)
+        final_pos = (col-num_movs, row)
       case '+':
-        if row-1 < 0:
+        if row-num_movs < 0:
           err = "Drone gets out of map at Y<0" 
-        final_pos = (col, row-1)
+        final_pos = (col, row-num_movs)
       case '-':
-        if row+1 >= self.dim[1]:
+        if row+num_movs >= self.dim[1]:
           err = f"Drone gets out of map at Y={self.dim[1]}"
-        final_pos = (col, row+1)
+        final_pos = (col, row+num_movs)
       case other:
         err = f"Unexpected movement type found: {other}"
     return final_pos, err
     
+  def process_next_move(self, prev_result, mov_type):
+    prev_pos, total_movs = prev_result
+    curr_pos, err = self.move_drone(prev_pos, mov_type)
+    if err is not None:
+      raise Exception(err) 
+
+    if self.level > 1:
+      if (tunnel_exit := self.tunnel_at(curr_pos)) is not None:
+        curr_pos = tunnel_exit
+      if self.wall_at(curr_pos):
+        raise Exception(f"Drone crushed into a wall at {curr_pos}!!")
+    if self.level > 2:
+      if self.drone_at(curr_pos, prev_pos):
+        raise Exception(f"Your drone collided with another drone at {curr_pos} (Nobody was hurt ;)")
+      self.update_drones_positions()
+    return (curr_pos, total_movs+1)
 
   
   def traverse_path(self, origin, movs):
     # origin -> (column, row)
     curr_pos = origin
     matched_movs = re.findall(r'\d+[><+-]', movs)
-    print(f"Path traversal from origin: {origin}")
-    total_path_movements = 0
-    prev_pos = curr_pos
-    for mov in matched_movs:
-      num_movs_of_type, mov_type = int(mov[:-1]), mov[-1]
-      for num_mov in range(num_movs_of_type): 
-        print(curr_pos)
-        curr_pos, err = self.move_drone(curr_pos, mov_type)
-        if err is not None:
-          return None, None, err
-
-        if self.level > 1:
-          if (tunnel_exit := self.tunnel_at(curr_pos)) is not None:
-            curr_pos = tunnel_exit
-          if self.wall_at(curr_pos):
-            return None, None, f"Drone crushed into a wall at {curr_pos}!!"
-        if self.level > 2:
-          if self.drone_at(curr_pos, prev_pos):
-            return None, None, f"Your drone collided with another drone at {curr_pos} (Nobody was hurt ;)"
-          self.update_drones_positions()
-        prev_pos = curr_pos
+    # print(f"Path traversal from origin: {origin}")
+    try:
+      curr_pos, num_movs = functools.reduce(self.process_next_move, (mov[-1] for mov in matched_movs for _ in range(int(mov[:-1]))), (curr_pos, 0)) 
+    except Exception as e:
+      return None, None, str(e)
         
-      total_path_movements += num_movs_of_type
-
-    return curr_pos, total_path_movements, None
+    return curr_pos, num_movs, None
 
 
   def coords_of_id(self, point_id):
-    point = self.find_point(point_id)
-    return point["coords"] if point else None
+    return self.delivery_points[point_id-1]["coords"]
 
   def contains_all_dpoints(self, ids):
-    expected_ids = set(map(lambda p: p["point_id"], self.delivery_points))
+    expected_ids = set([i+1 for i in range(len(self.delivery_points))])
     received_ids = set(ids)
     # not bool({}) == True
     return not bool(expected_ids - received_ids)
@@ -213,7 +195,6 @@ class MapConfig:
 
 
 def parse_route(raw_route):
-  print(raw_route)
   [ point_id, initial_coords, movs ] = raw_route.split(';')
   return {
     "point_id": int(point_id),
@@ -224,32 +205,32 @@ def parse_route(raw_route):
 
 
 def validate_output(config, file_content):
-  print(file_content)
   file_content = file_content.split('\n')
-  print(file_content)
   reported_movs = int(file_content[0])
   total_movs = 0
   delivery_points = []
+  total_points = len(config.delivery_points)
 
   curr_point = 1
   for route in file_content[1:]:
+    # print(total_movs / reported_movs)
     if route.strip() == "":
       continue
-    print(f"--- PROCESSING ROUTE AT LINE {curr_point} ---")
+    # print(f"--- PROCESSING ROUTE AT LINE {curr_point} ---")
     
     route = parse_route(route)
-    print(f"Route info: {route}")
+    # print(f"Route info: {route}")
 
     if (pos := config.has_required_position(route["point_id"])) is not None and curr_point != pos:
       return None, f"Delivery point with id {route["point_id"]} needs to be at position {pos}, found at {curr_point}"
     
-    print("Route is well placed")
+    # print("Route is well placed")
     
     coords, path_movs, err = config.traverse_path(route["initial_coords"], route["movs"])
     if err != None:
       return None, err
     
-    print("Drone doesn't crash or get out of map")
+    # print("Drone doesn't crash or get out of map")
     
     if coords != (expected_coords := config.coords_of_id(route["point_id"])):
       return None, f"Movements to reach delivery point with id {route["point_id"]} from {route["initial_coords"]} end up at {coords}, expected {expected_coords}"
