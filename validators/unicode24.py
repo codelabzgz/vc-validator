@@ -89,9 +89,6 @@ class MapConfig:
       })
     return drones
   
-  def wall_at(self, pos):
-    return pos in self.walls
-
   def check_drone_collision(self, drone, pos, prev_pos):
     drone_prev_pos = drone["position"]
     drone_next_pos, err = self.move_drone(drone_prev_pos, drone["movs"][drone["next_mov"]]) 
@@ -106,7 +103,7 @@ class MapConfig:
 
 
   def drone_at(self, pos, prev_pos):
-    return len(list(filter(lambda drone: self.check_drone_collision(drone, pos, prev_pos), self.drones))) > 0
+    return sum(1 for drone in self.drones if self.check_drone_collision(drone, pos, prev_pos)) > 0
   
   def update_drones_positions(self):
     
@@ -152,7 +149,7 @@ class MapConfig:
     if self.level > 1:
       if (tunnel_exit := self.tunnels.get(f"{curr_pos}")) is not None:
         curr_pos = tunnel_exit
-      if self.wall_at(curr_pos):
+      if curr_pos in self.walls:
         raise Exception(f"Drone crushed into a wall at {curr_pos}!!")
     if self.level > 2:
       if self.drone_at(curr_pos, prev_pos):
@@ -197,11 +194,10 @@ def validate_output(config, file_content):
   reported_movs = int(file_content[0])
   total_movs = 0
   delivery_points = []
-  total_points = len(config.delivery_points)
 
   curr_point = 1
   for route in file_content[1:]:
-    # print(total_movs / reported_movs)
+
     if route.strip() == "":
       continue
     # print(f"--- PROCESSING ROUTE AT LINE {curr_point} ---")
