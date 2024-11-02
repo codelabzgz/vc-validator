@@ -1,3 +1,4 @@
+import cProfile
 from datetime import datetime
 from os import getenv as env
 
@@ -16,7 +17,7 @@ app.mount(
 
 unicode24_easy_ds = unicode24.MapConfig("api/static/unicode-24/easy.txt", 1)
 unicode24_medium_ds = unicode24.MapConfig("api/static/unicode-24/medium.txt", 2)
-# unicode24_hard_ds = unicode24.MapConfig("api/static/unicode-24/hard.txt", 3)
+unicode24_hard_ds = unicode24.MapConfig("api/static/unicode-24/hard.txt", 3)
 
 @app.get("/health")
 async def health_check():
@@ -103,8 +104,10 @@ async def validator_unicode24(data: EventData):
             case 'medium':
                 config = unicode24_medium_ds 
             case 'hard' | 'insane':
-                config = unicode24_easy_ds
-        scoring_param, err = unicode24.validate_output(config, data.files[0].content)
+                config = unicode24_hard_ds
+        with cProfile.Profile() as profiler:
+            scoring_param, err = unicode24.validate_output(config, data.files[0].content)
+            profiler.print_stats()
         data.files[0].tests[0] = {
             "id": 1,
             "input": {

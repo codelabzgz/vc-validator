@@ -23,6 +23,12 @@ class MapConfig:
       self.dim = tuple(map(int, next(file_reader).split(';'))) # (X, Y)
       self.initial_pos = tuple(next(file_reader).split(',')) # (x, y) 
       self.delivery_points = self.read_points(file_reader)
+      self.movs = {
+        '>': (1, 0),
+        '<': (-1, 0),
+        '-': (0, 1),
+        '+': (0, -1),
+      }
       if level > 1:
         walls_ = self.read_walls_or_tunnels(file_reader) 
         # Transform wall ranges into all the positions that contain a wall
@@ -85,15 +91,24 @@ class MapConfig:
       drones.append({
         "position": tuple(map(int, next_drone[0].split(','))), 
         "movs": unfolded_movs, 
-        "next_mov": 0 
+        "next_mov": 0,
+        "total_movs": len(unfolded_movs) 
       })
     return drones
   
   def check_drone_collision(self, drone, pos, prev_pos):
+    """
+      This method does also update each drone's position due to efficiency requirements
+    """
     drone_prev_pos = drone["position"]
     drone_next_pos, err = self.move_drone(drone_prev_pos, drone["movs"][drone["next_mov"]]) 
     if err is not None:
       drone_next_pos = (drone_next_pos[0] % self.dim[1], drone_next_pos[1] % self.dim[0])
+    # Update drone's position
+    drone["position"] = drone_next_pos
+    drone["next_mov"] = (drone["next_mov"] + 1) % drone["total_movs"]
+
+    # Check for drone collision
     if drone_prev_pos[0] == drone_next_pos[0] and pos[0] == prev_pos[0]: # Movimiento eje vertical de ambos
       return drone_next_pos == pos or drone_prev_pos == pos
     elif drone_prev_pos[1] == drone_next_pos[1] and pos[1] == prev_pos[1]: # Movimiento eje horizontal de ambos
@@ -103,42 +118,24 @@ class MapConfig:
 
 
   def drone_at(self, pos, prev_pos):
-    return sum(1 for drone in self.drones if self.check_drone_collision(drone, pos, prev_pos)) > 0
+    return any(self.check_drone_collision(drone, pos, prev_pos) for drone in self.drones)
   
-  def update_drones_positions(self):
-    
-    for drone in self.drones:
-      drone_next_move = drone["movs"][drone["next_mov"]]
-      drone_next_pos, err = self.move_drone(drone["position"], drone_next_move)
-      if err is not None:
-        drone_next_pos = (drone_next_pos[0] % self.dim[1], drone_next_pos[1] % self.dim[0])
-      drone["position"] = drone_next_pos 
-      drone["next_mov"] = (drone["next_mov"] + 1) % len(drone["movs"])
-  
-
-  def move_drone(self, pos, mov_type, num_movs=1):
+  def move_drone(self, pos, mov_type):
     col, row = pos 
-    final_pos, err = None, None
-    match mov_type:
-      case '>':
-        if col+num_movs >= self.dim[0]:
-          err = f"Drone gets out of map at X={self.dim[0]}" 
-        final_pos = (col+num_movs, row)
-      case '<':
-        if col-num_movs < 0:
-          err = "Drone gets out of map at X<0" 
-        final_pos = (col-num_movs, row)
-      case '+':
-        if row-num_movs < 0:
-          err = "Drone gets out of map at Y<0" 
-        final_pos = (col, row-num_movs)
-      case '-':
-        if row+num_movs >= self.dim[1]:
-          err = f"Drone gets out of map at Y={self.dim[1]}"
-        final_pos = (col, row+num_movs)
-      case other:
-        err = f"Unexpected movement type found: {other}"
-    return final_pos, err
+    try:
+      col_mov, row_mov = self.movs[mov_type]
+      final_pos = (col + col_mov, row + row_mov)
+      if final_pos[0] >= self.dim[0]:
+        return None, f"Drone gets out of map at X={self.dim[0]}" 
+      if final_pos[0] < 0:
+        return None, "Drone gets out of map at X<0" 
+      if final_pos[1] < 0:
+        return "Drone gets out of map at Y<0" 
+      if final_pos[1] >= self.dim[1]:
+        return f"Drone gets out of map at Y={self.dim[1]}"
+      return final_pos, None 
+    except Exception as e:
+      return None, f"Unexpected movement type found: {mov_type}"
     
   def process_next_move(self, prev_result, mov_type):
     prev_pos, total_movs = prev_result
@@ -154,7 +151,6 @@ class MapConfig:
     if self.level > 2:
       if self.drone_at(curr_pos, prev_pos):
         raise Exception(f"Your drone collided with another drone at {curr_pos} (Nobody was hurt ;)")
-      self.update_drones_positions()
     return (curr_pos, total_movs+1)
 
   
@@ -197,6 +193,7 @@ def validate_output(config, file_content):
 
   curr_point = 1
   for route in file_content[1:]:
+    # print(total_movs / reported_movs)
 
     if route.strip() == "":
       continue
