@@ -228,5 +228,5 @@ def validate_output(config, file_content):
   
   return reported_movs, None
 
-def score(solution):
-  return 1000
+def score(movs, ds_size):
+  return ds_size * pow(0.99, movs) 

@@ -15,10 +15,6 @@ app.mount(
 )
 
 
-unicode24_easy_ds = unicode24.MapConfig("api/static/unicode-24/easy.txt", 1)
-unicode24_medium_ds = unicode24.MapConfig("api/static/unicode-24/medium.txt", 2)
-unicode24_hard_ds = unicode24.MapConfig("api/static/unicode-24/hard.txt", 3)
-
 @app.get("/health")
 async def health_check():
     """
@@ -97,17 +93,15 @@ async def validator_fibonacci(data: EventData):
 @app.post("/validator/unicode-24")
 async def validator_unicode24(data: EventData):
     try:
-        filename = data.difficulty + ".txt"
+        [ds_size, difficulty, _] = data.files[0].filename.split('_')
+        level = 1
         match data.difficulty:
-            case 'easy' | 'very easy': 
-                config = unicode24_easy_ds
             case 'medium':
-                config = unicode24_medium_ds 
+                level = 2 
             case 'hard' | 'insane':
-                config = unicode24_hard_ds
-        with cProfile.Profile() as profiler:
-            scoring_param, err = unicode24.validate_output(config, data.files[0].content)
-            profiler.print_stats()
+                level = 3 
+        config = unicode24.MapConfig(f"api/static/unicode-24/{difficulty}/{ds_size}", level)
+        scoring_param, err = unicode24.validate_output(config, data.files[0].content)
         data.files[0].tests[0] = {
             "id": 1,
             "input": {
@@ -118,7 +112,7 @@ async def validator_unicode24(data: EventData):
             },
             "actual": err,
             "success": err is None,
-            "points": 0 if err is not None else unicode24.score(scoring_param) 
+            "points": 0 if err is not None else unicode24.score(scoring_param, ds_size) 
         }
         return data
     except Exception as e:
