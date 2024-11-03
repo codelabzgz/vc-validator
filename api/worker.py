@@ -94,6 +94,7 @@ async def validator_fibonacci(data: EventData):
 async def validator_unicode24(data: EventData):
     try:
         filename = data.files[0].filename
+        [ds_size, _, _] = filename.split('_')
         level = 1
         match data.difficulty:
             case 'medium':

@@ -12,6 +12,7 @@
 #   - Si se valida correctamente -> determinar puntuación en base a número de movimientos
 
 import functools
+import math
 import re
 
 
@@ -229,4 +230,13 @@ def validate_output(config, file_content):
   return reported_movs, None
 
 def score(movs, ds_size, level):
-  return ds_size * pow(0.99, movs / level) 
+  match ds_size:
+    case 'small':
+      numerical_size = 100
+    case 'medium':
+      numerical_size = 1000
+    case 'big':
+      numerical_size = 100000
+    case 'crazy':
+      numerical_size = 1000000
+  return numerical_size * pow(0.99,  math.log10(movs / level)) 
