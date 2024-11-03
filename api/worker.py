@@ -93,14 +93,14 @@ async def validator_fibonacci(data: EventData):
 @app.post("/validator/unicode-24")
 async def validator_unicode24(data: EventData):
     try:
-        [ds_size, difficulty, _] = data.files[0].filename.split('_')
+        filename = data.files[0].filename
         level = 1
         match data.difficulty:
             case 'medium':
                 level = 2 
             case 'hard' | 'insane':
                 level = 3 
-        config = unicode24.MapConfig(f"api/static/unicode-24/{difficulty}/{ds_size}", level)
+        config = unicode24.MapConfig(f"api/static/unicode-24/{filename}", level)
         scoring_param, err = unicode24.validate_output(config, data.files[0].content)
         data.files[0].tests[0] = {
             "id": 1,
@@ -112,7 +112,7 @@ async def validator_unicode24(data: EventData):
             },
             "actual": err,
             "success": err is None,
-            "points": 0 if err is not None else unicode24.score(scoring_param, ds_size) 
+            "points": 0 if err is not None else unicode24.score(scoring_param, ds_size, level) 
         }
         return data
     except Exception as e:
