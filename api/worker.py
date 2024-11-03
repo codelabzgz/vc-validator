@@ -115,6 +115,7 @@ async def validator_unicode24(data: EventData):
             "success": err is None,
             "points": 0 if err is not None else unicode24.score(scoring_param, ds_size, level) 
         }
+        data.points = sum(test["points"] for test in data.files[0].tests)
         return data
     except Exception as e:
         raise HTTPException(
