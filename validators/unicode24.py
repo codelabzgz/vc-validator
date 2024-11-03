@@ -130,9 +130,9 @@ class MapConfig:
       if final_pos[0] < 0:
         return None, "Drone gets out of map at X<0" 
       if final_pos[1] < 0:
-        return "Drone gets out of map at Y<0" 
+        return None, "Drone gets out of map at Y<0" 
       if final_pos[1] >= self.dim[1]:
-        return f"Drone gets out of map at Y={self.dim[1]}"
+        return None, f"Drone gets out of map at Y={self.dim[1]}"
       return final_pos, None 
     except Exception as e:
       return None, f"Unexpected movement type found: {mov_type}"
