@@ -8,5 +8,10 @@
       "src": "/(.*)",
       "dest": "api/worker.py"
     }
-  ]
+  ],
+  "functions": {
+    "api/worker.py": {
+      "maxDuration": 55
+    }
+  }
 }
