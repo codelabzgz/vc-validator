@@ -11,7 +11,7 @@
   ],
   "functions": {
     "api/worker.py": {
-      "maxDuration": 55
+      "maxDuration": 60
     }
   }
 }
