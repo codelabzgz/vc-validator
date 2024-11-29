@@ -51,6 +51,6 @@ class EventData(BaseModel):
     validator: Optional[str] = None
     runner: Optional[str] = None
     maxFiles: Optional[int] = None
-    startDate: Optional[str] = None
-    endDate: Optional[str] = None
+    startDate: Optional[int] = None
+    endDate: Optional[int] = None
     files: List[File]
