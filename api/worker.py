@@ -122,3 +122,37 @@ async def validator_unicode24(data: EventData):
             status_code=500,
             detail=f"Internal Server Error: {str(e)}"
         )
+
+@app.post("/validator/unicode-25")
+async def validator_unicode25(data: EventData):
+    try:
+        filename = data.files[0].filename
+        [ds_size, _, _] = filename.split('_')
+        level = 1
+        match data.difficulty:
+            case 'medium':
+                level = 2 
+            case 'hard' | 'insane':
+                level = 3 
+        solution_schedule = unicode25.parse_output(data.files[0].content)
+        num_days, prof_hours_required, enrollments = unicode25.parse_input(f"api/static/unicode-25/{filename}")
+        errors = unicode25.validate_schedule(num_days, prof_hours_required, solution_schedule)
+        data.files[0].tests[0] = {
+            "id": 1,
+            "input": {
+                "file": {
+                    "name": filename,
+                    "path": f"{env("API_URL")}/static/unicode-25/{filename}",
+                }
+            },
+            "actual": errors[0] if len(errors) > 0 else "",
+            "success": len(errors) == 0,
+            "points": 0 if len(errors) > 0 else unicode25.calculate_score(enrollments, solution_schedule)
+        }
+        data.points = sum(test["points"] for test in data.files[0].tests)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal Server Error: {str(e)}"
+        )

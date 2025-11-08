@@ -40,7 +40,7 @@ def parse_input(file_path: str) -> Tuple[int, ProfHoursRequired, StudentEnrollme
     return num_days, prof_hours_required, student_enrollments
 
 # --- PARSE_OUTPUT (MODIFICADO) ---
-def parse_output(file_path: str) -> Tuple[Schedule, List[str]]:
+def parse_output(file: str) -> Tuple[Schedule, List[str]]:
     """
     Lee el fichero de salida (la solución) y lo estructura.
     Devuelve el horario y una lista de errores de formato.
@@ -49,8 +49,7 @@ def parse_output(file_path: str) -> Tuple[Schedule, List[str]]:
     schedule: Schedule = {}
     format_errors: List[str] = []
     
-    with open(file_path, 'r') as f:
-        lines = f.readlines()
+    lines = file.split('\n') 
         
     i = 0
     # MODIFICACION: Inicializar a -1 para permitir que el día 0 sea el primero.
