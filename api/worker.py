@@ -1,11 +1,12 @@
 import cProfile
+import sys, os
 from datetime import datetime
 from os import getenv as env
 
 from fastapi import FastAPI, HTTPException, staticfiles
 
 from models.req import EventData
-from validators import fibonacci, onePizza, unicode24
+from validators import fibonacci, onePizza, unicode24, unicode25
 
 app = FastAPI()
 app.mount(
@@ -127,14 +128,13 @@ async def validator_unicode24(data: EventData):
 async def validator_unicode25(data: EventData):
     try:
         filename = data.files[0].filename
-        [ds_size, _, _] = filename.split('_')
         level = 1
         match data.difficulty:
             case 'medium':
                 level = 2 
             case 'hard' | 'insane':
                 level = 3 
-        solution_schedule = unicode25.parse_output(data.files[0].content)
+        solution_schedule, _ = unicode25.parse_output(data.files[0].content)
         num_days, prof_hours_required, enrollments = unicode25.parse_input(f"api/static/unicode-25/{filename}")
         errors = unicode25.validate_schedule(num_days, prof_hours_required, solution_schedule)
         data.files[0].tests[0] = {
@@ -152,7 +152,10 @@ async def validator_unicode25(data: EventData):
         data.points = sum(test["points"] for test in data.files[0].tests)
         return data
     except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+
         raise HTTPException(
             status_code=500,
-            detail=f"Internal Server Error: {str(e)}"
+            detail=f"Internal Server Error: {str(e)}" # {exc_type} {fname}  {exc_tb.tb_lineno}"
         )

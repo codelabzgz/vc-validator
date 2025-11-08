@@ -311,67 +311,67 @@ def calculate_theoretical_max(
     return theoretical_max_score
 
 
-def main():
-    """Función principal del validador."""
-    
-    INPUT_FILE = "entrada.txt"
-    OUTPUT_FILE = "salida.txt"
-    
-    print(f"--- Iniciando Validacion ---")
-    print(f"Fichero de Entrada: {INPUT_FILE}")
-    print(f"Fichero de Salida:  {OUTPUT_FILE}")
-    print("---------------------------------")
-    
-    try:
-        num_days, prof_hours, student_enrollments = parse_input(INPUT_FILE)
-    except FileNotFoundError:
-        print(f"Error Critico: No se encuentra el fichero de entrada '{INPUT_FILE}'.")
-        return
-    except Exception as e:
-        print(f"Error Critico al parsear ENTRADA: {e}")
-        return
-
-    try:
-        schedule, format_errors = parse_output(OUTPUT_FILE)
-    except FileNotFoundError:
-        print(f"Error Critico: No se encuentra el fichero de salida '{OUTPUT_FILE}'.")
-        return
-    except Exception as e:
-        print(f"Error Critico al parsear SALIDA: {e}")
-        return
-
-    if format_errors:
-        print("Error de Formato en Fichero de Salida:")
-        for err in format_errors:
-            print(f"  - {err}")
-        print("Validacion cancelada por errores de formato.")
-        return
-
-    print("Validando reglas del problema...")
-    validation_errors = validate_schedule(num_days, prof_hours, schedule)
-    
-    if validation_errors:
-        print("Validacion FALLIDA. Se encontraron los siguientes errores:")
-        unique_errors = sorted(list(set(validation_errors)))
-        for i, err in enumerate(unique_errors, 1):
-            print(f"  {i}. {err}")
-        print("---------------------------------")
-    else:
-        print("Validacion de Reglas: CORRECTA")
-        print("---------------------------------")
-        
-        print("Calculando puntuacion...")
-        
-        theoretical_max = calculate_theoretical_max(prof_hours, student_enrollments)
-        score = calculate_score(student_enrollments, schedule)
-        
-        if score == theoretical_max:
-            print(f"Puntuacion Final: {score} horas")
-            print("Maximo alcanzado")
-        else:
-            print(f"Puntuacion Final: {score} horas (Aun se puede mejorar)")
-            
-        print("---------------------------------")
-
-if __name__ == "__main__":
-    main()
+#def main():
+#    """Función principal del validador."""
+#    
+#    INPUT_FILE = "entrada.txt"
+#    OUTPUT_FILE = "salida.txt"
+#    
+#    print(f"--- Iniciando Validacion ---")
+#    print(f"Fichero de Entrada: {INPUT_FILE}")
+#    print(f"Fichero de Salida:  {OUTPUT_FILE}")
+#    print("---------------------------------")
+#    
+#    try:
+#        num_days, prof_hours, student_enrollments = parse_input(INPUT_FILE)
+#    except FileNotFoundError:
+#        print(f"Error Critico: No se encuentra el fichero de entrada '{INPUT_FILE}'.")
+#        return
+#    except Exception as e:
+#        print(f"Error Critico al parsear ENTRADA: {e}")
+#        return
+#
+#    try:
+#        schedule, format_errors = parse_output(OUTPUT_FILE)
+#    except FileNotFoundError:
+#        print(f"Error Critico: No se encuentra el fichero de salida '{OUTPUT_FILE}'.")
+#        return
+#    except Exception as e:
+#        print(f"Error Critico al parsear SALIDA: {e}")
+#        return
+#
+#    if format_errors:
+#        print("Error de Formato en Fichero de Salida:")
+#        for err in format_errors:
+#            print(f"  - {err}")
+#        print("Validacion cancelada por errores de formato.")
+#        return
+#
+#    print("Validando reglas del problema...")
+#    validation_errors = validate_schedule(num_days, prof_hours, schedule)
+#    
+#    if validation_errors:
+#        print("Validacion FALLIDA. Se encontraron los siguientes errores:")
+#        unique_errors = sorted(list(set(validation_errors)))
+#        for i, err in enumerate(unique_errors, 1):
+#            print(f"  {i}. {err}")
+#        print("---------------------------------")
+#    else:
+#        print("Validacion de Reglas: CORRECTA")
+#        print("---------------------------------")
+#        
+#        print("Calculando puntuacion...")
+#        
+#        theoretical_max = calculate_theoretical_max(prof_hours, student_enrollments)
+#        score = calculate_score(student_enrollments, schedule)
+#        
+#        if score == theoretical_max:
+#            print(f"Puntuacion Final: {score} horas")
+#            print("Maximo alcanzado")
+#        else:
+#            print(f"Puntuacion Final: {score} horas (Aun se puede mejorar)")
+#            
+#        print("---------------------------------")
+#
+#if __name__ == "__main__":
+#    main()
