@@ -1,6 +1,7 @@
 import sys
 from collections import defaultdict
 from typing import Dict, Set, List, Tuple, Any
+import math
 
 # Tipos para claridad
 ProfMateria = Tuple[int, int]
@@ -285,7 +286,7 @@ def calculate_score(student_enrollments: StudentEnrollments, schedule: Schedule)
             
         total_score += student_total_hours
         
-    return total_score
+    return (4.5 * math.log10(total_score + 1))
 
 def calculate_theoretical_max(
     prof_hours_required: ProfHoursRequired, 
